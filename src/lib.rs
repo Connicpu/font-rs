@@ -14,6 +14,9 @@
 
 //! A very high performance font renderer.
 
+#[cfg(feature = "nightly-sse")]
+extern crate simd;
+
 pub mod geom;
 pub mod raster;
 pub mod font;

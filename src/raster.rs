@@ -28,7 +28,7 @@ pub struct Raster {
     a: Vec<f32>
 }
 
-#[cfg(feature="sse")]
+#[cfg(all(feature = "sse", not(feature = "nightly-sse")))]
 #[link(name = "accumulate")]
 extern {
     fn accumulate_sse(src: *const f32, dst: *mut u8, n: u32);
@@ -134,7 +134,31 @@ impl Raster {
     }
 */
 
-    #[cfg(feature="sse")]
+    #[cfg(feature = "nightly-sse")]
+    pub fn get_bitmap(&self) -> Vec<u8> {
+        use simd::{f32x4, i32x4};
+
+        let dst_size = self.w * self.h;
+        let dst_cap = (dst_size + 3) & !3;
+        let mut r: Vec<u8> = Vec::with_capacity(dst_cap);
+        unsafe { r.set_len(dst_cap) };
+        
+        let offset = f32x4::splat(0.0);
+        let mask = i32x4::splat(0x0c080400i32);
+        let sign_mask = f32x4::splat(0.0);
+        let mut i = 0;
+        while i < dst_cap {
+            let mut x = f32x4::load(&self.a, i);
+            x = x + (x.to_i32() << 4).to_f32();
+            x = x + 
+
+            i += 4;
+        }
+
+        unsafe { r.set_len(dst_size); }
+    }
+
+    #[cfg(all(feature = "sse", not(feature = "nightly-sse")))]
     pub fn get_bitmap(&self) -> Vec<u8> {
         let dst_size = self.w * self.h;
         let dst_cap = (dst_size + 3) & !3;
@@ -146,7 +170,7 @@ impl Raster {
         r
     }
 
-    #[cfg(not(feature="sse"))]
+    #[cfg(not(any(feature = "sse", feature = "nightly-sse")))]
     pub fn get_bitmap(&self) -> Vec<u8> {
         let mut acc = 0.0;
         (0..self.w * self.h).map(|i| {
